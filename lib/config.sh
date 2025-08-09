@@ -28,7 +28,7 @@ get_profile_packages() {
         ruby) echo "ruby-full ruby-dev libreadline-dev libyaml-dev libsqlite3-dev sqlite3 libxml2-dev libxslt1-dev libcurl4-openssl-dev software-properties-common" ;;
         php) echo "php php-cli php-fpm php-mysql php-pgsql php-sqlite3 php-curl php-gd php-mbstring php-xml php-zip composer" ;;
         database) echo "postgresql-client mysql-client sqlite3 redis-tools mongodb-clients" ;;
-        devops) echo "docker.io docker-compose kubectl helm terraform ansible awscli" ;;
+        devops) echo "docker.io docker-compose ansible awscli" ;;
         web) echo "nginx apache2-utils httpie" ;;
         embedded) echo "gcc-arm-none-eabi gdb-multiarch openocd picocom minicom screen" ;;
         datascience) echo "r-base" ;;
