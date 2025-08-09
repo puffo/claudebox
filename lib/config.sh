@@ -27,7 +27,7 @@ get_profile_packages() {
   ruby) echo "ruby-full ruby-dev libreadline-dev libyaml-dev libsqlite3-dev sqlite3 libxml2-dev libxslt1-dev libcurl4-openssl-dev software-properties-common" ;;
   php) echo "php php-cli php-fpm php-mysql php-pgsql php-sqlite3 php-curl php-gd php-mbstring php-xml php-zip composer" ;;
   database) echo "postgresql-client mysql-client sqlite3 redis-tools mongodb-clients" ;;
-  devops) echo "docker.io docker-compose docker-compose-plugin ansible awscli" ;;
+  devops) echo "docker.io docker-compose kubectl helm terraform ansible awscli" ;;
   web) echo "nginx apache2-utils httpie" ;;
   embedded) echo "gcc-arm-none-eabi gdb-multiarch openocd picocom minicom screen" ;;
   datascience) echo "r-base" ;;
@@ -293,8 +293,108 @@ get_profile_database() {
 
 get_profile_devops() {
   local packages=$(get_profile_packages "devops")
+  
+  # Install prerequisites for all repositories if needed
+  if [[ "$packages" == *"docker"* ]] || [[ "$packages" == *"terraform"* ]] || [[ "$packages" == *"helm"* ]] || [[ "$packages" == *"kubectl"* ]]; then
+    cat <<'EOF'
+# Install prerequisites for repositories
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    curl \
+    gnupg \
+    lsb-release \
+    wget \
+    apt-transport-https && \
+    apt-get clean
+
+EOF
+  fi
+  
+  # Set up Docker repository if Docker packages are requested
+  if [[ "$packages" == *"docker"* ]]; then
+    cat <<'EOF'
+# Add Docker's official GPG key and repository
+RUN install -m 0755 -d /etc/apt/keyrings && \
+    curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg && \
+    chmod a+r /etc/apt/keyrings/docker.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian \
+    $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+    tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+EOF
+  fi
+  
+  # Set up Kubernetes repository if kubectl is requested
+  if [[ "$packages" == *"kubectl"* ]]; then
+    cat <<'EOF'
+# Add Kubernetes official GPG key and repository for kubectl
+RUN mkdir -p -m 755 /etc/apt/keyrings && \
+    curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.33/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg && \
+    chmod 644 /etc/apt/keyrings/kubernetes-apt-keyring.gpg && \
+    echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.33/deb/ /' | \
+    tee /etc/apt/sources.list.d/kubernetes.list && \
+    chmod 644 /etc/apt/sources.list.d/kubernetes.list
+
+EOF
+  fi
+  
+  # Set up Helm repository if requested
+  if [[ "$packages" == *"helm"* ]]; then
+    cat <<'EOF'
+# Add Helm's official GPG key and repository
+RUN curl https://baltocdn.com/helm/signing.asc | gpg --dearmor | tee /usr/share/keyrings/helm.gpg > /dev/null && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main" | \
+    tee /etc/apt/sources.list.d/helm-stable-debian.list
+
+EOF
+  fi
+  
+  # Set up Terraform repository if requested
+  if [[ "$packages" == *"terraform"* ]]; then
+    cat <<'EOF'
+# Add HashiCorp's official GPG key and repository for Terraform
+RUN wget -O - https://apt.releases.hashicorp.com/gpg | gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(grep -oP '(?<=UBUNTU_CODENAME=).*' /etc/os-release || lsb_release -cs) main" | \
+    tee /etc/apt/sources.list.d/hashicorp.list
+
+EOF
+  fi
+  
+  # Install packages - Docker packages will be mapped to their official equivalents
   if [[ -n "$packages" ]]; then
-    echo "RUN apt-get update && apt-get install -y $packages && apt-get clean"
+    # Replace docker.io with docker-ce packages and add docker-compose-plugin
+    local docker_packages=""
+    local other_packages=""
+    
+    for pkg in $packages; do
+      case "$pkg" in
+        docker.io)
+          docker_packages="docker-ce docker-ce-cli containerd.io docker-buildx-plugin"
+          ;;
+        docker-compose)
+          docker_packages="$docker_packages docker-compose-plugin"
+          ;;
+        *)
+          other_packages="$other_packages $pkg"
+          ;;
+      esac
+    done
+    
+    if [[ -n "$docker_packages" || -n "$other_packages" ]]; then
+      echo "# Install DevOps tools"
+      echo "RUN apt-get update && apt-get install -y \\"
+      if [[ -n "$docker_packages" ]]; then
+        for pkg in $docker_packages; do
+          echo "    $pkg \\"
+        done
+      fi
+      if [[ -n "$other_packages" ]]; then
+        for pkg in $other_packages; do
+          echo "    $pkg \\"
+        done
+      fi
+      echo "    && apt-get clean"
+    fi
   fi
 }
 
