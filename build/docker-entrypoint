@@ -351,7 +351,7 @@ else
             fi
             
             # After claude exits, copy .claude.json if it was created
-            if [[ -f "$HOME/.claude.json" ]] && [[ ! -f "$HOME/.claudebox/${CLAUDEBOX_SLOT_NAME}/.claude.json" ]]; then
+            if [[ -f "$HOME/.claude.json" ]] && [[ -n "${CLAUDEBOX_SLOT_NAME:-}" ]] && [[ ! -f "$HOME/.claudebox/${CLAUDEBOX_SLOT_NAME}/.claude.json" ]]; then
                 cp "$HOME/.claude.json" "$HOME/.claudebox/${CLAUDEBOX_SLOT_NAME}/.claude.json"
             fi
         ' -- "$@"
