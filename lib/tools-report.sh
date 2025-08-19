@@ -260,7 +260,9 @@ _describe_profile() {
             echo "**Ruby Development Environment**"
             echo
             echo "Ruby programming tools:"
-            echo "- Ruby - Ruby interpreter"
+            echo "- Ruby 3.4.0 - Ruby interpreter (via rbenv)"
+            echo "- rbenv - Ruby version manager"
+            echo "- ruby-build - rbenv plugin for building Ruby versions"
             echo "- gem - Ruby package manager"
             echo "- bundler - Dependency manager"
             echo "- Development libraries for native extensions"

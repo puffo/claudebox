@@ -24,7 +24,7 @@ get_profile_packages() {
   go) echo "" ;;         # Installed from tarball
   javascript) echo "" ;; # Installed via nvm
   java) echo "openjdk-17-jdk maven gradle ant" ;;
-  ruby) echo "ruby-full ruby-dev libreadline-dev libyaml-dev libsqlite3-dev sqlite3 libxml2-dev libxslt1-dev libcurl4-openssl-dev software-properties-common" ;;
+  ruby) echo "" ;; # Installed via rbenv in get_profile_ruby()
   php) echo "php php-cli php-fpm php-mysql php-pgsql php-sqlite3 php-curl php-gd php-mbstring php-xml php-zip composer" ;;
   database) echo "postgresql-client mysql-client sqlite3 redis-tools mongodb-clients" ;;
   devops) echo "docker.io docker-compose kubectl helm terraform ansible awscli" ;;
@@ -50,7 +50,7 @@ get_profile_description() {
   go) echo "Go Development (installed from upstream archive)" ;;
   javascript) echo "JavaScript/TypeScript (Node installed via nvm)" ;;
   java) echo "Java Development (OpenJDK 17, Maven, Gradle, Ant)" ;;
-  ruby) echo "Ruby Development (gems, native deps, XML/YAML)" ;;
+  ruby) echo "Ruby Development (Ruby 3.4.0 via rbenv, gems, native deps)" ;;
   php) echo "PHP Development (PHP + extensions + Composer)" ;;
   database) echo "Database Tools (clients for major databases)" ;;
   devops) echo "DevOps Tools (Docker, Kubernetes, Terraform, etc.)" ;;
@@ -271,10 +271,43 @@ get_profile_java() {
 }
 
 get_profile_ruby() {
-  local packages=$(get_profile_packages "ruby")
-  if [[ -n "$packages" ]]; then
-    echo "RUN apt-get update && apt-get install -y $packages && apt-get clean"
-  fi
+  cat <<'EOF'
+# Install Ruby dependencies and build tools
+RUN apt-get update && apt-get install -y \
+    autoconf \
+    bison \
+    build-essential \
+    libssl-dev \
+    libyaml-dev \
+    libreadline-dev \
+    zlib1g-dev \
+    libncurses5-dev \
+    libffi-dev \
+    libgdbm-dev \
+    libdb-dev \
+    libsqlite3-dev \
+    libxml2-dev \
+    libxslt1-dev \
+    libcurl4-openssl-dev \
+    software-properties-common \
+    && apt-get clean
+
+# Install rbenv and ruby-build
+RUN git clone https://github.com/rbenv/rbenv.git /opt/rbenv && \
+    git clone https://github.com/rbenv/ruby-build.git /opt/rbenv/plugins/ruby-build
+
+# Set up rbenv environment
+ENV PATH="/opt/rbenv/bin:/opt/rbenv/shims:$PATH"
+ENV RBENV_ROOT="/opt/rbenv"
+
+# Install Ruby 3.4.0
+RUN rbenv install 3.4.0 && \
+    rbenv global 3.4.0 && \
+    rbenv rehash
+
+# Install bundler
+RUN gem install bundler && rbenv rehash
+EOF
 }
 
 get_profile_php() {
