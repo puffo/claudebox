@@ -167,7 +167,8 @@ claudebox shell
 
 # Terminal 3 - Project C
 cd ~/projects/ml-model
-claudebox profile python ml
+claudebox add python ml
+claudebox rebuild
 ```
 
 Each project maintains its own:
@@ -186,16 +187,18 @@ ClaudeBox includes 15+ pre-configured development environments:
 # List all available profiles with descriptions
 claudebox profiles
 
-# Interactive profile management menu
-claudebox profile
+# Add profiles to your project (then rebuild to apply)
+claudebox add ruby                # Add Ruby development profile
+claudebox add python              # Add Python development profile
+claudebox add python ml           # Add Python + Machine Learning
+claudebox add c openwrt           # Add C/C++ + OpenWRT development
+claudebox add rust go             # Add multiple profiles at once
 
-# Check current project's profiles
-claudebox profile status
+# Remove profiles from your project
+claudebox remove python           # Remove Python profile
 
-# Install specific profiles (project-specific)
-claudebox profile python ml       # Python + Machine Learning
-claudebox profile c openwrt       # C/C++ + OpenWRT
-claudebox profile rust go         # Rust + Go
+# After adding/removing profiles, rebuild the container
+claudebox rebuild                  # Rebuild with new profiles
 ```
 
 #### Available Profiles:
@@ -411,14 +414,18 @@ ClaudeBox automatically handles Docker setup, but if you encounter issues:
 ```bash
 # Clean and rebuild for current project
 claudebox clean --project
-claudebox rebuild
-claudebox profile <name>
+claudebox add <profile-name>   # Add the profile you want
+claudebox rebuild             # Rebuild container with profile
 ```
 
 ### Profile Changes Not Taking Effect
-ClaudeBox automatically detects profile changes and rebuilds when needed. If you're having issues:
+After adding or removing profiles, you must rebuild the container:
 ```bash
-# Force rebuild
+# Add or remove profiles
+claudebox add ruby            # Example: add Ruby profile
+claudebox remove python       # Example: remove Python profile
+
+# Then rebuild to apply changes
 claudebox rebuild
 ```
 
