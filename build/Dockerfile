@@ -20,7 +20,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg]" \
     "https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null && apt-get update && \
         apt-get install -y --no-autoremove --no-install-recommends apt-utils wget zsh fzf ca-certificates sudo git tmux iptables ipset gh unzip jq \
-        procps vim nano less iputils-ping traceroute dnsutils netcat-openbsd net-tools xdg-utils
+        procps vim nano less iputils-ping traceroute dnsutils netcat-openbsd net-tools xdg-utils shellcheck
 
 ENV LANG=en_US.UTF-8 \
     LANGUAGE=en_US:en \
@@ -57,8 +57,14 @@ RUN sh -c "$(wget -O- https://github.com/deluan/zsh-in-docker/releases/download/
 
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
+# Install shfmt for shell script formatting via webi
+RUN curl -sS https://webi.sh/shfmt | sh
+
+# Update PATH to include ~/.local/bin and source envman
 RUN echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc && \
-    echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
+    echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc && \
+    echo '[ -s "$HOME/.config/envman/load.sh" ] && source "$HOME/.config/envman/load.sh"' >> ~/.bashrc && \
+    echo '[ -s "$HOME/.config/envman/load.sh" ] && source "$HOME/.config/envman/load.sh"' >> ~/.zshrc
 
 # uv is installed - venv creation is handled by entrypoint in shared folder
 
