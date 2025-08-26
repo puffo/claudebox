@@ -357,6 +357,9 @@ get_profile_ruby() {
     local ruby_version
     ruby_version=$(detect_ruby_version)
 
+    # Strip 'ruby-' prefix if present (common in some .ruby-version files)
+    ruby_version="${ruby_version#ruby-}"
+
     # Validate Ruby version format (basic check)
     if ! echo "$ruby_version" | grep -qE '^[0-9]+\.[0-9]+(\.[0-9]+)?$'; then
         printf "Warning: Invalid Ruby version format '%s', using default 3.4.5\n" "$ruby_version" >&2
