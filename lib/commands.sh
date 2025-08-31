@@ -143,19 +143,24 @@ show_interactive_menu() {
     2)
         echo "Opening development shell..."
         _cmd_shell
+        exit $?
         ;;
     3)
         echo "Creating new slot..."
         _cmd_create
+        exit $?
         ;;
     4)
         _cmd_status
+        exit $?
         ;;
     5)
         _cmd_profiles
+        exit $?
         ;;
     6)
         show_claudebox_commands
+        exit 0
         ;;
     0)
         echo "Goodbye!"

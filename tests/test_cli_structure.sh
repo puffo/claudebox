@@ -204,6 +204,29 @@ test_shortcuts_work() {
     done
 }
 
+test_interactive_menu_structure() {
+    # Test that interactive menu cases properly exit
+    local menu_file="$LIB_DIR/commands.sh"
+    
+    # Check that interactive menu cases have proper exit statements
+    # This prevents fall-through bugs where menu options continue to Claude CLI
+    local case_pattern="[0-9]+\)"
+    local exit_pattern="exit \$?"
+    
+    # Look for interactive menu function
+    if grep -q "show_interactive_menu()" "$menu_file"; then
+        # Check that non-default cases have exit statements
+        local cases_with_exits
+        cases_with_exits=$(grep -A3 "[2-9])" "$menu_file" | grep -c "exit")
+        
+        # Should have at least 5 menu options with exits (options 2-6)
+        [[ $cases_with_exits -ge 5 ]] || {
+            printf "Interactive menu cases missing proper exit statements\n" >&2
+            return 1
+        }
+    fi
+}
+
 # ============================================================================
 # Help Text Consistency Tests
 # ============================================================================
