@@ -318,7 +318,7 @@ detect_ruby_version() {
 
     # 4. Check .tool-versions file (asdf/mise)
     if [[ -f "$project_dir/.tool-versions" ]]; then
-        ruby_version=$(grep '^ruby ' "$project_dir/.tool-versions" 2>/dev/null | awk '{print $2}' | head -n1)
+        ruby_version=$(grep '^ruby[[:space:]]' "$project_dir/.tool-versions" 2>/dev/null | awk '{print $2}' | head -n1)
         if [[ -n "$ruby_version" ]]; then
             if [[ "$VERBOSE" == "true" ]]; then
                 printf "Using Ruby version from .tool-versions: %s\n" "$ruby_version" >&2

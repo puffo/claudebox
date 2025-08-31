@@ -1,8 +1,34 @@
 # ClaudeBox Tests
 
-This directory contains test scripts to verify ClaudeBox compatibility across different Bash versions.
+This directory contains test scripts to verify ClaudeBox compatibility across different Bash versions and profile configurations.
+
+## Test Structure
+
+```
+tests/
+├── README.md                     # This file
+├── test_bash32_compat.sh        # Bash 3.2 compatibility tests
+├── test_in_bash32_docker.sh     # Docker-based Bash 3.2 tests
+├── test_profile_detection.sh    # Master runner for profile tests
+└── profiles/                     # Profile-specific version detection tests
+    ├── README.md                 # Profile tests documentation
+    ├── TEMPLATE_test_PROFILE_detection.sh  # Template for new tests
+    └── test_ruby_detection.sh   # Ruby version detection tests
+```
 
 ## Test Scripts
+
+### test_profile_detection.sh
+Master test runner for all profile version detection tests. Automatically discovers and runs tests in the `profiles/` directory.
+
+**Usage:**
+```bash
+# Run all profile tests
+./test_profile_detection.sh
+
+# Run specific profile tests
+./test_profile_detection.sh ruby
+```
 
 ### test_bash32_compat.sh
 A comprehensive test suite that verifies Bash 3.2 compatibility by checking:
