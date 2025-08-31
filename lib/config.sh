@@ -24,7 +24,7 @@ get_profile_packages() {
     go) echo "" ;;         # Installed from tarball
     javascript) echo "" ;; # Installed via nvm
     java) echo "openjdk-17-jdk maven gradle ant" ;;
-    ruby) echo "" ;; # Installed via rbenv in get_profile_ruby()
+    ruby) echo "" ;; # Installed via mise in get_profile_ruby()
     php) echo "php php-cli php-fpm php-mysql php-pgsql php-sqlite3 php-curl php-gd php-mbstring php-xml php-zip composer" ;;
     database) echo "postgresql-client mysql-client sqlite3 redis-tools mongodb-clients" ;;
     devops) echo "docker.io docker-compose kubectl helm terraform ansible awscli" ;;
@@ -50,7 +50,7 @@ get_profile_description() {
     go) echo "Go Development (installed from upstream archive)" ;;
     javascript) echo "JavaScript/TypeScript (Node installed via nvm)" ;;
     java) echo "Java Development (OpenJDK 17, Maven, Gradle, Ant)" ;;
-    ruby) echo "Ruby Development (Ruby via rbenv with auto-detection, gems, native deps)" ;;
+    ruby) echo "Ruby Development (Ruby via mise with auto-detection, gems, native deps)" ;;
     php) echo "PHP Development (PHP + extensions + Composer)" ;;
     database) echo "Database Tools (clients for major databases)" ;;
     devops) echo "DevOps Tools (Docker, Kubernetes, Terraform, etc.)" ;;
@@ -286,7 +286,7 @@ detect_ruby_version() {
         return 0
     fi
 
-    # 2. Check .ruby-version file (rbenv, rvm, chruby standard)
+    # 2. Check .ruby-version file (compatible with rbenv, rvm, chruby, mise)
     if [[ -f "$project_dir/.ruby-version" ]]; then
         ruby_version=$(head -n1 "$project_dir/.ruby-version" | tr -d '[:space:]')
         if [[ -n "$ruby_version" ]]; then
@@ -387,25 +387,34 @@ RUN apt-get update && apt-get install -y \\
     software-properties-common \\
     && apt-get clean
 
-# Install rbenv and ruby-build
-RUN git clone https://github.com/rbenv/rbenv.git /opt/rbenv && \\
-    git clone https://github.com/rbenv/ruby-build.git /opt/rbenv/plugins/ruby-build
+# Install mise (runtime version manager) as claude user
+RUN su - claude -c "curl https://mise.run | sh" && \\
+    echo 'export PATH="/home/claude/.local/bin:\$PATH"' >> /home/claude/.bashrc && \\
+    echo 'export PATH="/home/claude/.local/bin:\$PATH"' >> /home/claude/.zshrc && \\
+    echo 'eval "\$(/home/claude/.local/bin/mise activate bash)"' >> /home/claude/.bashrc && \\
+    echo 'eval "\$(/home/claude/.local/bin/mise activate zsh)"' >> /home/claude/.zshrc
 
-# Set up rbenv environment
-ENV PATH="/opt/rbenv/bin:/opt/rbenv/shims:\$PATH"
-ENV RBENV_ROOT="/opt/rbenv"
+# Set up mise environment
+ENV PATH="/home/claude/.local/bin:\${PATH}"
+ENV MISE_GLOBAL_CONFIG_FILE="/home/claude/.config/mise/config.toml"
+ENV MISE_DATA_DIR="/home/claude/.local/share/mise"
+ENV MISE_CACHE_DIR="/home/claude/.cache/mise"
 
-# Install Ruby ${ruby_version}
-RUN rbenv install ${ruby_version} && \\
-    rbenv global ${ruby_version} && \\
-    rbenv rehash
+# Configure mise settings to avoid warnings
+RUN su - claude -c "mkdir -p /home/claude/.config/mise && \\
+    /home/claude/.local/bin/mise settings set experimental true && \\
+    /home/claude/.local/bin/mise settings set idiomatic_version_file_enable_tools ruby && \\
+    /home/claude/.local/bin/mise settings set trusted_config_paths /workspace"
+
+# Install Ruby ${ruby_version} using mise
+RUN su - claude -c "/home/claude/.local/bin/mise use --global ruby@${ruby_version}" && \\
+    su - claude -c "/home/claude/.local/bin/mise reshim"
 
 # Update RubyGems and install bundler properly
 # --no-document skips documentation installation
-# --no-user-install ensures system-wide installation (as root)
-RUN gem update --system --no-document && \\
-    gem install bundler --no-document --no-user-install && \\
-    rbenv rehash
+# Use mise exec to run commands in the mise environment
+RUN su - claude -c "/home/claude/.local/bin/mise exec ruby@${ruby_version} -- gem update --system --no-document && \\
+    /home/claude/.local/bin/mise exec ruby@${ruby_version} -- gem install bundler --no-document"
 
 # Configure gem to not require sudo for the claude user
 # This sets up user-specific gem directory for runtime installations

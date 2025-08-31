@@ -263,17 +263,16 @@ _describe_profile() {
         echo
         echo "Ruby programming tools:"
         echo "- Ruby - Ruby interpreter (version auto-detected or specified via CLAUDEBOX_RUBY_VERSION)"
-        echo "- rbenv - Ruby version manager"
-        echo "- ruby-build - rbenv plugin for building Ruby versions"
+        echo "- mise - Modern runtime version manager for Ruby"
         echo "- gem - Ruby package manager"
         echo "- bundler - Dependency manager"
         echo "- Development libraries for native extensions"
         echo
         echo "Version detection priority:"
         echo "1. CLAUDEBOX_RUBY_VERSION environment variable"
-        echo "2. .ruby-version file (rbenv/rvm/chruby)"
-        echo "3. mise.toml or .mise.toml file (mise)"
-        echo "4. .tool-versions file (asdf/mise)"
+        echo "2. .ruby-version file (compatible with rbenv/rvm/chruby)"
+        echo "3. mise.toml or .mise.toml file"
+        echo "4. .tool-versions file (asdf/mise format)"
         echo "5. Gemfile ruby directive"
         echo "6. Default: Ruby 3.4.5"
         echo

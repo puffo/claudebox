@@ -40,6 +40,16 @@ ClaudeBox checks for Ruby version in this priority order:
 
 6. **Default fallback** - Uses Ruby 3.4.5 if no version is specified
 
+## How Ruby Version Management Works
+
+ClaudeBox uses **mise** (formerly rtx) as its Ruby version manager. Mise is a modern, polyglot runtime manager that provides fast, reliable version management for Ruby and many other languages.
+
+When you start a container with the Ruby profile, ClaudeBox:
+1. Detects the Ruby version from your project files
+2. Installs mise in the container
+3. Uses mise to install and activate the detected Ruby version
+4. Configures the environment to use that Ruby version globally
+
 ## Examples
 
 ### Example 1: Rails Project with .ruby-version
@@ -76,9 +86,21 @@ ruby "3.3.0"
 $ claudebox start --profile ruby  # Uses Ruby 3.3.0
 ```
 
+### Example 4: Using mise.toml for Ruby Version
+
+```bash
+# Create a mise.toml file
+$ cat mise.toml
+[tools]
+ruby = "3.2.2"
+
+# ClaudeBox will detect and use this version
+$ claudebox start --profile ruby
+```
+
 ## Best Practices
 
-1. **Use .ruby-version for consistency** - This file is recognized by most Ruby version managers (rbenv, rvm, chruby)
+1. **Use .ruby-version for consistency** - This file is recognized by most Ruby version managers (mise, rbenv, rvm, chruby)
 
 2. **Commit version files to your repository** - This ensures all developers use the same Ruby version
 
@@ -90,8 +112,8 @@ $ claudebox start --profile ruby  # Uses Ruby 3.3.0
 
 If you see warnings about invalid Ruby versions:
 - Check that your version format is correct (e.g., "3.2.0" not "ruby-3.2.0")
-- Ensure the version exists in ruby-build's version list
-- Use `rbenv install --list` inside the container to see available versions
+- Ensure the version is available in mise's Ruby plugin
+- Use `mise list-remote ruby` inside the container to see available versions
 
 ## Verbose Mode
 
