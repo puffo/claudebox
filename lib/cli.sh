@@ -82,7 +82,7 @@ get_command_requirements() {
 
     case "$cmd" in
     # Pure host commands - no Docker or image needed
-    profiles | projects | help | -h | --help | slots | create | revoke | clean | import | unlink | kill | commands | p | c | update-self | update-status | update-all)
+    profiles | projects | help | -h | --help | slots | create | revoke | clean | import | unlink | kill | commands | p | c | update-self | update-status)
         echo "none"
         ;;
     # Commands that need image name but not Docker
@@ -90,7 +90,7 @@ get_command_requirements() {
         echo "image"
         ;;
     # Commands that need Docker and will run containers
-    shell | project | rebuild | update | config | mcp | migrate-installer | tmux | slot | "" | s)
+    shell | project | rebuild | update | update-all | config | mcp | migrate-installer | tmux | slot | "" | s)
         echo "docker"
         ;;
     # Unknown commands are forwarded to Claude in container
@@ -113,7 +113,7 @@ requires_slot() {
 
     # Commands that need a slot
     case "$cmd" in
-    shell | update | config | mcp | migrate-installer | create | slot | "")
+    shell | update | update-all | config | mcp | migrate-installer | create | slot | "")
         return 0 # true - needs slot
         ;;
     *)
