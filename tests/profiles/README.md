@@ -93,3 +93,39 @@ Tests should output:
 - Expected vs. actual values for failures
 
 This standardized format allows the master test runner to aggregate results across all profiles.
+
+## Ruby Profile Tests
+
+### Version Detection Test
+Tests the Ruby version detection logic:
+
+```bash
+bash tests/profiles/test_ruby_detection.sh
+```
+
+Coverage:
+- `.ruby-version` file parsing (with and without `ruby-` prefix)
+- `mise.toml` and `.mise.toml` parsing
+- `.tool-versions` parsing
+- `Gemfile` ruby directive parsing
+- Priority order between different files
+- Environment variable override (`CLAUDEBOX_RUBY_VERSION`)
+- Default fallback behavior (3.4.5)
+- Version format validation
+
+### mise Integration Test
+Tests the Ruby profile's mise installation and Docker configuration:
+
+```bash
+bash tests/profiles/test_ruby_mise_integration.sh
+```
+
+Coverage:
+- mise installation via curl
+- mise PATH and environment configuration
+- Ruby installation with specific versions
+- Gem and bundler setup
+- Ruby build dependencies
+- Gemfile handling and bundle install
+- Docker layer optimization
+- User permissions and ownership

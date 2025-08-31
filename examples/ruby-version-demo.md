@@ -45,10 +45,12 @@ ClaudeBox checks for Ruby version in this priority order:
 ClaudeBox uses **mise** (formerly rtx) as its Ruby version manager. Mise is a modern, polyglot runtime manager that provides fast, reliable version management for Ruby and many other languages.
 
 When you start a container with the Ruby profile, ClaudeBox:
-1. Detects the Ruby version from your project files
-2. Installs mise in the container
+1. Detects the Ruby version from your project files (with smart fallback to 3.4.5)
+2. Installs mise in a single optimized Docker layer for faster builds
 3. Uses mise to install and activate the detected Ruby version
-4. Configures the environment to use that Ruby version globally
+4. Configures the environment with proper PATH and gem settings
+5. Pre-installs bundler for immediate use
+6. If a Gemfile exists, pre-installs project dependencies for faster startup
 
 ## Examples
 
@@ -108,12 +110,27 @@ $ claudebox start --profile ruby
 
 4. **Test with multiple versions** - Use the CLAUDEBOX_RUBY_VERSION override to test compatibility
 
+## Performance Optimizations
+
+The Ruby profile has been optimized for fast Docker builds:
+- **Single-layer mise installation**: All mise setup happens in one RUN command
+- **Efficient dependency installation**: Ruby build dependencies are installed in a single layer
+- **Smart caching**: Gemfile dependencies are pre-installed and cached separately
+- **Parallel gem installation**: Uses `bundle install --jobs 4` for faster installs
+- **Minimal rebuilds**: Changes to your code won't trigger Ruby reinstallation
+
 ## Troubleshooting
 
 If you see warnings about invalid Ruby versions:
 - Check that your version format is correct (e.g., "3.2.0" not "ruby-3.2.0")
 - Ensure the version is available in mise's Ruby plugin
 - Use `mise list-remote ruby` inside the container to see available versions
+
+Common issues and solutions:
+- **Ruby not found**: Ensure the Ruby profile is added with `claudebox add ruby`
+- **Gem installation fails**: Check network connectivity and firewall settings
+- **Wrong Ruby version**: Verify your `.ruby-version` file is in the project root
+- **Bundle install slow**: Pre-install gems by having Gemfile in project root during build
 
 ## Verbose Mode
 

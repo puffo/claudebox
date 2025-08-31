@@ -367,83 +367,54 @@ get_profile_ruby() {
     fi
 
     cat <<EOF
-# Install Ruby dependencies and build tools
+# Install Ruby build dependencies
 RUN apt-get update && apt-get install -y \\
-    autoconf \\
-    bison \\
-    build-essential \\
-    libssl-dev \\
-    libyaml-dev \\
-    libreadline-dev \\
-    zlib1g-dev \\
-    libncurses5-dev \\
-    libffi-dev \\
-    libgdbm-dev \\
-    libdb-dev \\
-    libsqlite3-dev \\
-    libxml2-dev \\
-    libxslt1-dev \\
-    libcurl4-openssl-dev \\
-    software-properties-common \\
-    && apt-get clean
+    autoconf bison build-essential \\
+    libssl-dev libyaml-dev libreadline-dev zlib1g-dev \\
+    libncurses5-dev libffi-dev libgdbm-dev libdb-dev \\
+    libsqlite3-dev libxml2-dev libxslt1-dev libcurl4-openssl-dev \\
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install mise (runtime version manager) as claude user
-RUN su - claude -c "curl https://mise.run | sh" && \\
+# Install mise and Ruby ${ruby_version} as claude user
+# Combines mise installation, configuration, and Ruby setup in one layer
+USER claude
+WORKDIR /home/claude
+RUN curl https://mise.run | sh && \\
+    export PATH="/home/claude/.local/bin:\$PATH" && \\
+    /home/claude/.local/bin/mise settings set experimental true && \\
+    /home/claude/.local/bin/mise settings set idiomatic_version_file_enable_tools ruby && \\
+    /home/claude/.local/bin/mise settings set trusted_config_paths /workspace && \\
+    /home/claude/.local/bin/mise use --global ruby@${ruby_version} && \\
+    /home/claude/.local/bin/mise exec -- gem update --system --no-document && \\
+    /home/claude/.local/bin/mise exec -- gem install bundler --no-document && \\
     echo 'export PATH="/home/claude/.local/bin:\$PATH"' >> /home/claude/.bashrc && \\
     echo 'export PATH="/home/claude/.local/bin:\$PATH"' >> /home/claude/.zshrc && \\
     echo 'eval "\$(/home/claude/.local/bin/mise activate bash)"' >> /home/claude/.bashrc && \\
-    echo 'eval "\$(/home/claude/.local/bin/mise activate zsh)"' >> /home/claude/.zshrc
+    echo 'eval "\$(/home/claude/.local/bin/mise activate zsh)"' >> /home/claude/.zshrc && \\
+    echo "gem: --no-document --user-install" > /home/claude/.gemrc
 
-# Set up mise environment
-ENV PATH="/home/claude/.local/bin:\${PATH}"
+# Switch back to root for remaining setup
+USER root
+WORKDIR /workspace
+
+# Set up mise and Ruby environment paths
+ENV PATH="/home/claude/.local/bin:/home/claude/.local/share/mise/shims:\${PATH}"
 ENV MISE_GLOBAL_CONFIG_FILE="/home/claude/.config/mise/config.toml"
 ENV MISE_DATA_DIR="/home/claude/.local/share/mise"
 ENV MISE_CACHE_DIR="/home/claude/.cache/mise"
-
-# Configure mise settings to avoid warnings
-RUN su - claude -c "mkdir -p /home/claude/.config/mise && \\
-    /home/claude/.local/bin/mise settings set experimental true && \\
-    /home/claude/.local/bin/mise settings set idiomatic_version_file_enable_tools ruby && \\
-    /home/claude/.local/bin/mise settings set trusted_config_paths /workspace"
-
-# Install Ruby ${ruby_version} using mise
-RUN su - claude -c "/home/claude/.local/bin/mise use --global ruby@${ruby_version}" && \\
-    su - claude -c "/home/claude/.local/bin/mise reshim"
-
-# Update RubyGems and install bundler properly
-# --no-document skips documentation installation
-# Use mise exec to run commands in the mise environment
-RUN su - claude -c "/home/claude/.local/bin/mise exec ruby@${ruby_version} -- gem update --system --no-document && \\
-    /home/claude/.local/bin/mise exec ruby@${ruby_version} -- gem install bundler --no-document"
-
-# Configure gem to not require sudo for the claude user
-# This sets up user-specific gem directory for runtime installations
-RUN echo "gem: --no-document --user-install" > /home/claude/.gemrc && \\
-    chown claude:claude /home/claude/.gemrc
-
-# Set up user gem paths for runtime
 ENV GEM_HOME="/home/claude/.gem"
-ENV PATH="/home/claude/.gem/bin:\$PATH"
-
-# Create gem directory with proper permissions
-RUN mkdir -p /home/claude/.gem && \\
-    chown -R claude:claude /home/claude/.gem
+ENV PATH="/home/claude/.gem/bin:\${PATH}"
 EOF
 
     # Check if Gemfile exists in the project and add bundle install
     if [[ -f "${PROJECT_DIR}/Gemfile" ]]; then
         cat <<EOF
 
-# Copy Gemfile for dependency installation during build
-# This ensures gems are pre-installed in the image
-COPY Gemfile* /tmp/bundle/
-
-# Install gems from Gemfile as claude user
+# Copy and install project gems (optimizes Docker layer caching)
+COPY --chown=claude:claude Gemfile* /tmp/bundle/
 USER claude
 WORKDIR /tmp/bundle
-RUN if [ -f Gemfile ]; then bundle install || echo "Bundle install failed, continuing..."; fi
-
-# Switch back to root for remaining setup
+RUN bundle install --jobs 4 --retry 3 || true
 USER root
 WORKDIR /workspace
 EOF

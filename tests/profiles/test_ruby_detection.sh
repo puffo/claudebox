@@ -277,7 +277,7 @@ test_profile_generation() {
     local output
     output=$(PROJECT_DIR="$TEST_TEMP_DIR" get_profile_ruby 2>/dev/null)
     
-    if echo "$output" | grep -q "Install Ruby ${version}"; then
+    if echo "$output" | grep -q "Install mise and Ruby ${version}"; then
         printf "${GREEN}PASS${NC}\n"
         TESTS_PASSED=$((TESTS_PASSED + 1))
         cleanup_all
