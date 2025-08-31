@@ -28,7 +28,7 @@ get_profile_packages() {
     php) echo "php php-cli php-fpm php-mysql php-pgsql php-sqlite3 php-curl php-gd php-mbstring php-xml php-zip composer" ;;
     database) echo "postgresql-client mysql-client sqlite3 redis-tools mongodb-clients" ;;
     devops) echo "docker.io docker-compose kubectl helm terraform ansible awscli" ;;
-    web) echo "nginx apache2-utils httpie" ;;
+    web) echo "nginx apache2-utils httpie chromium chromium-driver" ;;
     embedded) echo "gcc-arm-none-eabi gdb-multiarch openocd picocom minicom screen" ;;
     datascience) echo "r-base" ;;
     security) echo "nmap tcpdump wireshark-common netcat-openbsd john hashcat hydra" ;;
@@ -54,7 +54,7 @@ get_profile_description() {
     php) echo "PHP Development (PHP + extensions + Composer)" ;;
     database) echo "Database Tools (clients for major databases)" ;;
     devops) echo "DevOps Tools (Docker, Kubernetes, Terraform, etc.)" ;;
-    web) echo "Web Dev Tools (nginx, HTTP test clients)" ;;
+    web) echo "Web Dev Tools (nginx, HTTP clients, Chromium for browser testing)" ;;
     embedded) echo "Embedded Dev (ARM toolchain, serial debuggers)" ;;
     datascience) echo "Data Science (Python, Jupyter, R)" ;;
     security) echo "Security Tools (scanners, crackers, packet tools)" ;;
@@ -382,8 +382,10 @@ WORKDIR /home/claude
 RUN curl https://mise.run | sh && \\
     export PATH="/home/claude/.local/bin:\$PATH" && \\
     /home/claude/.local/bin/mise settings set experimental true && \\
-    /home/claude/.local/bin/mise settings set idiomatic_version_file_enable_tools ruby && \\
-    /home/claude/.local/bin/mise settings set trusted_config_paths /workspace && \\
+    /home/claude/.local/bin/mise settings add idiomatic_version_file_enable_tools ruby && \\
+    /home/claude/.local/bin/mise trust /workspace && \\
+    /home/claude/.local/bin/mise trust /workspace/.mise.toml 2>/dev/null || true && \\
+    /home/claude/.local/bin/mise trust /workspace/mise.toml 2>/dev/null || true && \\
     /home/claude/.local/bin/mise use --global ruby@${ruby_version} && \\
     /home/claude/.local/bin/mise exec -- gem update --system --no-document && \\
     /home/claude/.local/bin/mise exec -- gem install bundler --no-document && \\
@@ -547,7 +549,76 @@ EOF
 get_profile_web() {
     local packages=$(get_profile_packages "web")
     if [[ -n "$packages" ]]; then
-        echo "RUN apt-get update && apt-get install -y $packages && apt-get clean"
+        cat <<EOF
+# Install web development tools
+RUN apt-get update && apt-get install -y $packages && apt-get clean
+
+# Install Chromium with architecture-specific approach
+# For x86_64: Download from official snapshots (as recommended by Ferrum)
+# For ARM64: Use Debian package (only reliable option for ARM)
+RUN apt-get update && apt-get install -y \\
+    wget \\
+    fonts-liberation \\
+    libasound2 \\
+    libatk-bridge2.0-0 \\
+    libatk1.0-0 \\
+    libatspi2.0-0 \\
+    libcups2 \\
+    libdbus-1-3 \\
+    libdrm2 \\
+    libgbm1 \\
+    libgtk-3-0 \\
+    libnspr4 \\
+    libnss3 \\
+    libxcomposite1 \\
+    libxdamage1 \\
+    libxfixes3 \\
+    libxkbcommon0 \\
+    libxrandr2 \\
+    xdg-utils \\
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Install Chromium based on architecture
+RUN ARCH=\$(dpkg --print-architecture) && \\
+    if [ "\$ARCH" = "amd64" ]; then \\
+        echo "Installing Chromium for x86_64 from official snapshots..." && \\
+        cd /opt && \\
+        git clone https://github.com/scheib/chromium-latest-linux.git && \\
+        cd chromium-latest-linux && \\
+        ./update.sh && \\
+        ln -sf /opt/chromium-latest-linux/latest/chrome /usr/local/bin/chromium && \\
+        ln -sf /opt/chromium-latest-linux/latest/chrome /usr/local/bin/chromium-browser && \\
+        ln -sf /opt/chromium-latest-linux/latest/chrome /usr/local/bin/chrome && \\
+        echo "export CHROME_BIN=/opt/chromium-latest-linux/latest/chrome" >> /etc/environment && \\
+        echo "export BROWSER_PATH=/opt/chromium-latest-linux/latest/chrome" >> /etc/environment; \\
+    elif [ "\$ARCH" = "arm64" ] || [ "\$ARCH" = "aarch64" ]; then \\
+        echo "Installing Chromium for ARM64 from Debian packages..." && \\
+        apt-get update && \\
+        apt-get install -y chromium chromium-driver && \\
+        apt-get clean && rm -rf /var/lib/apt/lists/* && \\
+        ln -sf /usr/bin/chromium /usr/local/bin/chrome && \\
+        echo "export CHROME_BIN=/usr/bin/chromium" >> /etc/environment && \\
+        echo "export BROWSER_PATH=/usr/bin/chromium" >> /etc/environment; \\
+    else \\
+        echo "Unsupported architecture: \$ARCH" && exit 1; \\
+    fi
+
+# Set environment variables for Chromium in containerized environment
+ENV CHROMIUM_FLAGS="--no-sandbox --disable-dev-shm-usage --disable-gpu"
+
+# Create a wrapper script for Chromium with container-friendly flags
+RUN echo '#!/bin/bash' > /usr/local/bin/chromium-wrapper && \\
+    echo '# Detect which chromium binary to use' >> /usr/local/bin/chromium-wrapper && \\
+    echo 'if [ -x "/opt/chromium-latest-linux/latest/chrome" ]; then' >> /usr/local/bin/chromium-wrapper && \\
+    echo '    exec /opt/chromium-latest-linux/latest/chrome --no-sandbox --disable-dev-shm-usage --disable-gpu "\$@"' >> /usr/local/bin/chromium-wrapper && \\
+    echo 'elif [ -x "/usr/bin/chromium" ]; then' >> /usr/local/bin/chromium-wrapper && \\
+    echo '    exec /usr/bin/chromium --no-sandbox --disable-dev-shm-usage --disable-gpu "\$@"' >> /usr/local/bin/chromium-wrapper && \\
+    echo 'else' >> /usr/local/bin/chromium-wrapper && \\
+    echo '    echo "Error: Chromium binary not found" >&2' >> /usr/local/bin/chromium-wrapper && \\
+    echo '    exit 1' >> /usr/local/bin/chromium-wrapper && \\
+    echo 'fi' >> /usr/local/bin/chromium-wrapper && \\
+    chmod +x /usr/local/bin/chromium-wrapper
+EOF
     fi
 }
 

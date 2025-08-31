@@ -396,6 +396,7 @@ dispatch_command() {
     commands) show_claudebox_commands ;;
     shell | s) _cmd_shell "$@" ;;
     update) _cmd_update "$@" ;;
+    rebuild) _cmd_rebuild "$@" ;;
 
     # Profile commands
     profiles | p) _cmd_profiles "$@" ;;

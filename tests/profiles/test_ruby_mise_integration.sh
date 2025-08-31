@@ -83,8 +83,14 @@ run_test "mise activation for zsh" \
 run_test "mise experimental settings" \
     "mise settings set experimental true"
 
-run_test "mise trusted config paths" \
-    "mise settings set trusted_config_paths /workspace"
+run_test "mise idiomatic version file settings" \
+    "mise settings add idiomatic_version_file_enable_tools ruby"
+
+run_test "mise trust workspace directory" \
+    "mise trust /workspace"
+
+run_test "mise trust workspace config files" \
+    "mise trust /workspace/.mise.toml 2>/dev/null || true"
 
 echo
 echo "2. Testing Ruby installation commands"

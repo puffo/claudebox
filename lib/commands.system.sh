@@ -33,13 +33,38 @@ _cmd_unlink() {
 }
 
 _cmd_rebuild() {
-    # Set rebuild flag and continue with normal execution
-    export REBUILD=true
-
-    # Remove 'rebuild' from the arguments and continue
-    # This allows "claudebox rebuild" to rebuild then launch Claude
-    # or "claudebox rebuild shell" to rebuild then open shell
-    _forward_to_container "${@}"
+    # Force rebuild of the Docker image
+    info "Rebuilding ClaudeBox Docker image for current project..."
+    
+    # Initialize project directory to ensure parent exists
+    init_project_dir "$PROJECT_DIR"
+    
+    # Get the image name using the standard function
+    local image_name
+    image_name=$(get_image_name)
+    
+    # Check if --no-cache was requested (handle empty $1 safely)
+    local no_cache=""
+    if [[ "${1:-}" == "--no-cache" ]]; then
+        no_cache="--no-cache"
+        shift
+        info "Forcing complete rebuild without cache..."
+    fi
+    
+    # Build the image
+    if build_docker_image "$PROJECT_DIR" "$image_name" "$no_cache"; then
+        success "Docker image rebuilt successfully"
+        
+        # If there are additional arguments, treat them as a command to run after rebuild
+        if [[ $# -gt 0 ]]; then
+            # Run the command in the newly rebuilt container
+            _forward_to_container "$@"
+        else
+            info "Run 'claudebox' to start using the rebuilt environment"
+        fi
+    else
+        error "Failed to rebuild Docker image"
+    fi
 }
 
 _cmd_kill() {
