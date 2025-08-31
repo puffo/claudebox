@@ -297,7 +297,7 @@ show_claudebox_commands() {
     printf '%s\n' "Update Commands:"
     printf '  %-25s - %s\n' "update-self" "Update ClaudeBox to latest version"
     printf '  %-25s - %s\n' "update-status" "Show ClaudeBox update status"
-    printf '  %-25s - %s\n' "update all" "Update both ClaudeBox and Claude"
+    printf '  %-25s - %s\n' "update-all" "Update both ClaudeBox and Claude"
     printf '\n'
     
     printf '%s\n' "Help & Information:"
@@ -433,6 +433,7 @@ dispatch_command() {
     kill) _cmd_kill "$@" ;;
     
     # Update commands
+    update-all) _cmd_update_all "$@" ;;
     update-self) _cmd_update_self "$@" ;;
     update-status) _cmd_update_status "$@" ;;
 

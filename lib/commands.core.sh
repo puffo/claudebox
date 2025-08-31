@@ -137,127 +137,42 @@ _cmd_update_status() {
     show_update_status
 }
 
-_cmd_update() {
-    # Handle different update modes - keeping existing behavior for Claude updates
-    local first_arg="${1:-}"
+_cmd_update_all() {
+    # Update both ClaudeBox and Claude - same as 'update all' but as standalone command
+    info "Updating all components..."
+    echo
     
-    case "$first_arg" in
-    --all|all)
-        # Update both ClaudeBox and Claude
-        info "Updating all components..."
-        echo
-        
-        # First update ClaudeBox itself
-        info "Updating ClaudeBox..."
-        if update_claudebox_self update; then
-            success "✓ ClaudeBox updated successfully"
-        else
-            warn "ClaudeBox update had issues, continuing with Claude update..."
-        fi
-        echo
-        
-        # Then update Claude (shift to remove "all" argument)
-        shift
-        ;;
-    legacy-all)
-        # Legacy update system (for backwards compatibility)
-        info "Using legacy update system..."
-        echo
-
-        # Update claudebox script
-        info "Updating claudebox script..."
-        if command -v curl >/dev/null 2>&1; then
-            curl -fsSL https://raw.githubusercontent.com/puffo/claudebox/main/main.sh -o /tmp/claudebox.new
-        elif command -v wget >/dev/null 2>&1; then
-            wget -qO /tmp/claudebox.new https://raw.githubusercontent.com/puffo/claudebox/main/main.sh
-        else
-            error "Neither curl nor wget found"
-        fi
-
-        if [[ -f /tmp/claudebox.new ]]; then
-            # Find the installed claudebox (not the source)
-            local installed_path=$(which claudebox 2>/dev/null || echo "/usr/local/bin/claudebox")
-
-            # If it's a symlink, replace it with the actual file first
-            if [[ -L "$installed_path" ]]; then
-                info "Converting symlink to real file..."
-                local source_file=$(readlink -f "$installed_path")
-                if [[ -w "$(dirname "$installed_path")" ]]; then
-                    cp "$source_file" "$installed_path.tmp"
-                    mv "$installed_path.tmp" "$installed_path"
-                    chmod +x "$installed_path"
-                else
-                    sudo cp "$source_file" "$installed_path.tmp"
-                    sudo mv "$installed_path.tmp" "$installed_path"
-                    sudo chmod +x "$installed_path"
-                fi
-            fi
-
-            # Compare hashes of the INSTALLED file
-            current_hash=$(crc32_file "$installed_path" || echo "none")
-            new_hash=$(crc32_file /tmp/claudebox.new)
-
-            if [[ "$current_hash" != "$new_hash" ]]; then
-                info "New version available, updating..."
-
-                # Backup current installed version
-                local backups_dir="$HOME/.claudebox/backups"
-                mkdir -p "$backups_dir"
-                local timestamp=$(date +%s)
-                cp "$installed_path" "$backups_dir/$timestamp"
-                info "Backed up current version to $backups_dir/$timestamp"
-
-                # Update the INSTALLED file
-                if [[ -w "$installed_path" ]] || [[ -w "$(dirname "$installed_path")" ]]; then
-                    cp /tmp/claudebox.new "$installed_path"
-                    chmod +x "$installed_path"
-                else
-                    sudo cp /tmp/claudebox.new "$installed_path"
-                    sudo chmod +x "$installed_path"
-                fi
-                success "✓ Claudebox script updated at $installed_path"
-            else
-                success "✓ Claudebox script already up to date"
-            fi
-            rm -f /tmp/claudebox.new
-        fi
-        echo
-
-        # Update commands
-        info "Updating commands..."
-        local commands_dir="$HOME/.claudebox/commands"
-        mkdir -p "$commands_dir"
-
-        for cmd in taskengine devops; do
-            echo -n "  Updating $cmd.md... "
-            if command -v curl >/dev/null 2>&1; then
-                curl -fsSL "https://raw.githubusercontent.com/RchGrav/claudebox/main/commands/$cmd.md" -o "$commands_dir/$cmd.md"
-            else
-                wget -qO "$commands_dir/$cmd.md" "https://raw.githubusercontent.com/RchGrav/claudebox/main/commands/$cmd.md"
-            fi
-            echo "✓"
-        done
-        echo
-
-        # Now update Claude
-        info "Updating Claude..."
-        shift                # Remove "update"
-        shift                # Remove "legacy-all"
-        set -- "update" "$@" # Put back just "update"
-        ;;
-    *)
-        # Default: just update Claude (existing behavior)
-        # No shift needed, just pass through to Claude update
-        ;;
-    esac
-
+    # First update ClaudeBox itself
+    info "Updating ClaudeBox..."
+    if update_claudebox_self update; then
+        success "✓ ClaudeBox updated successfully"
+    else
+        warn "ClaudeBox update had issues, continuing with Claude update..."
+    fi
+    echo
+    
+    # Then update Claude
+    info "Updating Claude..."
+    
     # Check if image exists first
     if ! docker image inspect "$IMAGE_NAME" >/dev/null 2>&1; then
         error "No Docker image found for this project folder: $PROJECT_DIR\nRun 'claudebox' first to build the image, or cd to your project directory."
     fi
 
-    # Continue with normal update flow
+    # Continue with normal update flow for Claude
     _cmd_special "update" "$@"
 }
 
-export -f _cmd_help _cmd_shell _cmd_update _cmd_update_self _cmd_update_status
+_cmd_update() {
+    # Update only Claude CLI (no longer handles 'all' - use update-all command instead)
+    
+    # Check if image exists first
+    if ! docker image inspect "$IMAGE_NAME" >/dev/null 2>&1; then
+        error "No Docker image found for this project folder: $PROJECT_DIR\nRun 'claudebox' first to build the image, or cd to your project directory."
+    fi
+
+    # Continue with normal Claude update flow
+    _cmd_special "update" "$@"
+}
+
+export -f _cmd_help _cmd_shell _cmd_update _cmd_update_self _cmd_update_status _cmd_update_all

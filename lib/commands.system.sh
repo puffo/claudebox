@@ -755,7 +755,7 @@ _cmd_special() {
         # Show hint during update
         echo
         cecho "Hint:" "$YELLOW"
-        echo "  claudebox update all            # Pull the latest claudebox features!"
+        echo "  claudebox update-all            # Pull the latest claudebox features!"
         echo
     fi
     fillbar

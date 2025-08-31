@@ -352,7 +352,7 @@ update_claudebox_self() {
         echo "  claudebox update-self install Install ClaudeBox from git repository"  
         echo "  claudebox update-self rollback Rollback to previous version"
         echo "  claudebox update-status       Show ClaudeBox update status"
-        echo "  claudebox update all          Update both ClaudeBox and Claude"
+        echo "  claudebox update-all          Update both ClaudeBox and Claude"
         echo
         return 0
         ;;
