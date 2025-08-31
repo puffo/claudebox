@@ -127,18 +127,49 @@ _cmd_shell() {
     exit 0
 }
 
+_cmd_update_self() {
+    # ClaudeBox self-update using git
+    update_claudebox_self "$@"
+}
+
+_cmd_update_status() {
+    # Show ClaudeBox update status
+    show_update_status
+}
+
 _cmd_update() {
-    # Handle update all specially
-    if [[ "${1:-}" == "all" ]]; then
+    # Handle different update modes - keeping existing behavior for Claude updates
+    local first_arg="${1:-}"
+    
+    case "$first_arg" in
+    --all|all)
+        # Update both ClaudeBox and Claude
         info "Updating all components..."
+        echo
+        
+        # First update ClaudeBox itself
+        info "Updating ClaudeBox..."
+        if update_claudebox_self update; then
+            success "✓ ClaudeBox updated successfully"
+        else
+            warn "ClaudeBox update had issues, continuing with Claude update..."
+        fi
+        echo
+        
+        # Then update Claude (shift to remove "all" argument)
+        shift
+        ;;
+    legacy-all)
+        # Legacy update system (for backwards compatibility)
+        info "Using legacy update system..."
         echo
 
         # Update claudebox script
         info "Updating claudebox script..."
         if command -v curl >/dev/null 2>&1; then
-            curl -fsSL https://raw.githubusercontent.com/RchGrav/claudebox/main/claudebox -o /tmp/claudebox.new
+            curl -fsSL https://raw.githubusercontent.com/puffo/claudebox/main/main.sh -o /tmp/claudebox.new
         elif command -v wget >/dev/null 2>&1; then
-            wget -qO /tmp/claudebox.new https://raw.githubusercontent.com/RchGrav/claudebox/main/claudebox
+            wget -qO /tmp/claudebox.new https://raw.githubusercontent.com/puffo/claudebox/main/main.sh
         else
             error "Neither curl nor wget found"
         fi
@@ -211,9 +242,14 @@ _cmd_update() {
         # Now update Claude
         info "Updating Claude..."
         shift                # Remove "update"
-        shift                # Remove "all"
+        shift                # Remove "legacy-all"
         set -- "update" "$@" # Put back just "update"
-    fi
+        ;;
+    *)
+        # Default: just update Claude (existing behavior)
+        # No shift needed, just pass through to Claude update
+        ;;
+    esac
 
     # Check if image exists first
     if ! docker image inspect "$IMAGE_NAME" >/dev/null 2>&1; then
@@ -224,4 +260,4 @@ _cmd_update() {
     _cmd_special "update" "$@"
 }
 
-export -f _cmd_help _cmd_shell _cmd_update
+export -f _cmd_help _cmd_shell _cmd_update _cmd_update_self _cmd_update_status

@@ -289,6 +289,12 @@ show_claudebox_commands() {
     printf '  %-25s - %s\n' "tmux" "Launch ClaudeBox with tmux support"
     printf '\n'
     
+    printf '%s\n' "Update Commands:"
+    printf '  %-25s - %s\n' "update-self" "Update ClaudeBox to latest version"
+    printf '  %-25s - %s\n' "update-status" "Show ClaudeBox update status"
+    printf '  %-25s - %s\n' "update all" "Update both ClaudeBox and Claude"
+    printf '\n'
+    
     printf '%s\n' "Help & Information:"
     printf '  %-25s - %s\n' "help" "Show ClaudeBox help (this screen)"
     printf '  %-25s - %s\n' "help claude" "Show Claude CLI help"
@@ -420,6 +426,10 @@ dispatch_command() {
     project) _cmd_project "$@" ;;
     import) _cmd_import "$@" ;;
     kill) _cmd_kill "$@" ;;
+    
+    # Update commands
+    update-self) _cmd_update_self "$@" ;;
+    update-status) _cmd_update_status "$@" ;;
 
     # Special commands that modify container
     config | mcp | migrate-installer)
