@@ -432,6 +432,19 @@ main() {
         exit $?
     else
         # No script command - running Claude interactively
+        # Check if we should show interactive menu (no args and terminal input)
+        if [[ ${#CLI_PASS_THROUGH[@]} -eq 0 ]] && [[ -t 0 ]] && [[ -n "${PROJECT_SLOT_DIR:-}" ]]; then
+            # Show interactive menu and handle user choice
+            if show_interactive_menu; then
+                # User chose to continue with Claude CLI (option 1 or Enter)
+                # Continue with normal flow below
+                :
+            else
+                # User chose another option, function handled it and exited
+                exit 0
+            fi
+        fi
+        
         # This is where we load saved default flags
         if [[ -n "${PROJECT_SLOT_DIR:-}" ]]; then
             local slot_name=$(basename "$PROJECT_SLOT_DIR")

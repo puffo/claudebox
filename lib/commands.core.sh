@@ -23,18 +23,12 @@ _cmd_help() {
     "claude")
         show_claude_help
         ;;
+    "commands")
+        show_claudebox_commands
+        ;;
     "")
-        # Default behavior - check if we have project and show appropriate help
-        local project_folder_name
-        project_folder_name=$(get_project_folder_name "$PROJECT_DIR" 2>/dev/null || echo "NONE")
-
-        if [[ "$project_folder_name" != "NONE" ]] && [[ -n "${IMAGE_NAME:-}" ]] && docker image inspect "$IMAGE_NAME" &>/dev/null; then
-            # In project directory with image - show Claude help
-            show_claude_help
-        else
-            # Not in project directory - show ClaudeBox help
-            show_help
-        fi
+        # Always show ClaudeBox help first - users need to discover ClaudeBox commands
+        show_help
         ;;
     *)
         # Unknown subcommand - show regular help

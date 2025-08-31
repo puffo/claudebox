@@ -7,9 +7,9 @@
 # ============================================================================
 
 # Four flag buckets (Bash 3.2 compatible - no associative arrays)
-readonly HOST_ONLY_FLAGS=(--verbose rebuild)
+readonly HOST_ONLY_FLAGS=(--verbose --rebuild --tmux)
 readonly CONTROL_FLAGS=(--enable-sudo --disable-firewall)
-readonly SCRIPT_COMMANDS=(shell create slot slots revoke profiles projects profile info help -h --help add remove install allowlist clean save project tmux kill)
+readonly SCRIPT_COMMANDS=(shell create slot slots revoke profiles projects profile info help -h --help add remove install allowlist clean save project tmux kill commands s c p i status where)
 
 # parse_cli_args - Central CLI parsing with four-bucket architecture
 # Usage: parse_cli_args "$@"
@@ -62,10 +62,10 @@ process_host_flags() {
         --verbose)
             export VERBOSE=true
             ;;
-        rebuild)
+        --rebuild)
             export REBUILD=true
             ;;
-        tmux)
+        --tmux)
             export CLAUDEBOX_WRAP_TMUX=true
             ;;
         esac
@@ -82,15 +82,15 @@ get_command_requirements() {
 
     case "$cmd" in
     # Pure host commands - no Docker or image needed
-    profiles | projects | help | -h | --help | slots | create | revoke | clean | import | unlink | kill)
+    profiles | projects | help | -h | --help | slots | create | revoke | clean | import | unlink | kill | commands | p | c)
         echo "none"
         ;;
     # Commands that need image name but not Docker
-    info | profile | add | remove | install | allowlist | save)
+    info | profile | add | remove | install | allowlist | save | i | status | where)
         echo "image"
         ;;
     # Commands that need Docker and will run containers
-    shell | project | rebuild | update | config | mcp | migrate-installer | tmux | slot | "")
+    shell | project | rebuild | update | config | mcp | migrate-installer | tmux | slot | "" | s)
         echo "docker"
         ;;
     # Unknown commands are forwarded to Claude in container

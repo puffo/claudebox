@@ -71,15 +71,27 @@ source "${LIB_DIR}/commands.system.sh"
 show_no_slots_menu() {
     logo_small
     echo
-    cecho "No available slots found" "$YELLOW"
+    cecho "🚀 Quick Setup Required" "$CYAN"
     echo
-    printf "To continue, you'll need an available container slot.\n"
+    printf "No container slots found for this project.\n"
+    printf "Let's get you started with ClaudeBox!\n"
     echo
-    printf "  ${CYAN}claudebox create${NC}  - Create a new slot\n"
-    printf "  ${CYAN}claudebox slots${NC}   - View existing slots\n"
+    
+    cecho "📦 What are slots?" "$WHITE"
+    printf "   Slots are authenticated containers that let you run Claude CLI.\n"
+    printf "   Each slot maintains its own authentication and session history.\n"
     echo
-    printf "  ${DIM}Hint: Create multiple slots to run parallel authenticated${NC}\n"
-    printf "  ${DIM}Claude sessions in the same project.${NC}\n"
+    
+    cecho "⚡ Quick Start" "$WHITE"
+    printf "   ${CYAN}claudebox create${NC}    - Create your first authenticated slot\n"
+    printf "   ${CYAN}claudebox status${NC}    - Check current project status\n"
+    printf "   ${CYAN}claudebox help${NC}      - Show all available commands\n"
+    echo
+    
+    cecho "💡 Pro Tips" "$DIM"
+    printf "   • Create multiple slots for parallel Claude sessions\n"
+    printf "   • Each slot keeps separate conversation history\n"
+    printf "   • Your work is saved between sessions\n"
     echo
     exit 1
 }
@@ -97,6 +109,63 @@ show_no_ready_slots_menu() {
     printf '\n'
     printf '%s\n' "To use a specific slot: claudebox slot <number>"
     printf '\n'
+}
+
+# Interactive menu when no args provided and project is ready
+show_interactive_menu() {
+    logo_small
+    echo
+    cecho "ClaudeBox Interactive Menu" "$CYAN"
+    echo
+    
+    printf "Choose an action:\n"
+    echo
+    printf "  ${WHITE}1${NC}) ${CYAN}Start Claude CLI${NC}         - Launch interactive Claude session\n"
+    printf "  ${WHITE}2${NC}) ${CYAN}Open Shell${NC}              - Development shell in container\n"
+    printf "  ${WHITE}3${NC}) ${CYAN}Create Slot${NC}             - New authenticated container slot\n"
+    printf "  ${WHITE}4${NC}) ${CYAN}Project Status${NC}          - Show current project info\n"
+    printf "  ${WHITE}5${NC}) ${CYAN}Manage Profiles${NC}         - Add/remove development profiles\n"
+    printf "  ${WHITE}6${NC}) ${CYAN}Help & Commands${NC}         - Show all available commands\n"
+    printf "  ${WHITE}0${NC}) ${DIM}Exit${NC}\n"
+    echo
+    printf "Select option [1-6, 0]: "
+    
+    local choice
+    read -r choice
+    echo
+    
+    case "$choice" in
+    1|""|" ")
+        # Default to Claude CLI
+        echo "Starting Claude CLI..."
+        return 0  # Continue with normal Claude launch
+        ;;
+    2)
+        echo "Opening development shell..."
+        _cmd_shell
+        ;;
+    3)
+        echo "Creating new slot..."
+        _cmd_create
+        ;;
+    4)
+        _cmd_status
+        ;;
+    5)
+        _cmd_profiles
+        ;;
+    6)
+        show_claudebox_commands
+        ;;
+    0)
+        echo "Goodbye!"
+        exit 0
+        ;;
+    *)
+        echo "Invalid choice. Starting Claude CLI..."
+        return 0
+        ;;
+    esac
 }
 
 # Show help function
@@ -181,6 +250,56 @@ show_help() {
     fi
 }
 
+# Show only ClaudeBox commands for better discovery
+show_claudebox_commands() {
+    echo
+    logo_small
+    echo
+    cecho "ClaudeBox Commands Reference" "$CYAN"
+    echo
+    printf '%s\n' "Container Management:"
+    printf '  %-25s - %s\n' "create (c)" "Create new authenticated container slot"
+    printf '  %-25s - %s\n' "slots" "List all container slots"
+    printf '  %-25s - %s\n' "slot <number>" "Launch a specific container slot"
+    printf '  %-25s - %s\n' "revoke" "Remove container slots"
+    printf '  %-25s - %s\n' "shell (s)" "Open transient shell"
+    printf '  %-25s - %s\n' "shell admin" "Open admin shell (sudo enabled)"
+    printf '\n'
+    
+    printf '%s\n' "Development Profiles:"
+    printf '  %-25s - %s\n' "profiles (p)" "List all available profiles"
+    printf '  %-25s - %s\n' "add <profiles...>" "Add development profiles"
+    printf '  %-25s - %s\n' "remove <profiles...>" "Remove development profiles"
+    printf '  %-25s - %s\n' "install <packages>" "Install apt packages"
+    printf '\n'
+    
+    printf '%s\n' "Project Information:"
+    printf '  %-25s - %s\n' "status" "Show current project status"
+    printf '  %-25s - %s\n' "where" "Show project paths and configuration"
+    printf '  %-25s - %s\n' "info (i)" "Show comprehensive project info"
+    printf '  %-25s - %s\n' "projects" "List all projects with paths"
+    printf '  %-25s - %s\n' "project <name>" "Open project by name/hash"
+    printf '  %-25s - %s\n' "allowlist" "Show/edit firewall allowlist"
+    printf '\n'
+    
+    printf '%s\n' "System & Utilities:"
+    printf '  %-25s - %s\n' "save [flags...]" "Save default flags"
+    printf '  %-25s - %s\n' "clean" "Menu of cleanup tasks"
+    printf '  %-25s - %s\n' "import" "Import commands from host to project"
+    printf '  %-25s - %s\n' "tmux" "Launch ClaudeBox with tmux support"
+    printf '\n'
+    
+    printf '%s\n' "Help & Information:"
+    printf '  %-25s - %s\n' "help" "Show ClaudeBox help (this screen)"
+    printf '  %-25s - %s\n' "help claude" "Show Claude CLI help"
+    printf '  %-25s - %s\n' "help full" "Show combined help"
+    printf '  %-25s - %s\n' "help commands" "Show this command reference"
+    printf '\n'
+    
+    cecho "Note: ClaudeBox passes unknown commands to Claude CLI in the container" "$DIM"
+    echo
+}
+
 # Show Claude help (runs Claude's help in container)
 show_claude_help() {
     if [[ -n "${IMAGE_NAME:-}" ]] && docker image inspect "$IMAGE_NAME" &>/dev/null; then
@@ -263,18 +382,19 @@ dispatch_command() {
     case "${cmd}" in
     # Core commands
     help | -h | --help) _cmd_help "$@" ;;
-    shell) _cmd_shell "$@" ;;
+    commands) show_claudebox_commands ;;
+    shell | s) _cmd_shell "$@" ;;
     update) _cmd_update "$@" ;;
 
     # Profile commands
-    profiles) _cmd_profiles "$@" ;;
+    profiles | p) _cmd_profiles "$@" ;;
     profile) _cmd_profile "$@" ;;
     add) _cmd_add "$@" ;;
     remove) _cmd_remove "$@" ;;
     install) _cmd_install "$@" ;;
 
     # Slot commands
-    create) _cmd_create "$@" ;;
+    create | c) _cmd_create "$@" ;;
     slots) _cmd_slots "$@" ;;
     slot) _cmd_slot "$@" ;;
     revoke) _cmd_revoke "$@" ;;
@@ -283,7 +403,9 @@ dispatch_command() {
     # Info commands
     projects) _cmd_projects "$@" ;;
     allowlist) _cmd_allowlist "$@" ;;
-    info) _cmd_info "$@" ;;
+    info | i) _cmd_info "$@" ;;
+    status) _cmd_status "$@" ;;
+    where) _cmd_where "$@" ;;
 
     # Clean commands
     clean) _cmd_clean "$@" ;;
@@ -316,4 +438,4 @@ dispatch_command() {
 }
 
 # Export all public functions
-export -f dispatch_command show_help show_claude_help show_full_help show_no_slots_menu show_no_ready_slots_menu _forward_to_container
+export -f dispatch_command show_help show_claude_help show_full_help show_claudebox_commands show_no_slots_menu show_no_ready_slots_menu show_interactive_menu _forward_to_container
