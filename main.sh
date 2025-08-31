@@ -274,9 +274,37 @@ main() {
     project_folder_name=$(get_project_folder_name "$PROJECT_DIR")
 
     # Early exit if command needs Docker but no slots exist
+    # BUT: if we're running interactively with no args, show interactive menu instead
     if [[ "$project_folder_name" == "NONE" ]] && [[ "$cmd_requirements" == "docker" ]]; then
-        show_no_slots_menu
-        exit 1
+        if [[ "$VERBOSE" == "true" ]]; then
+            echo "[DEBUG] No slots found, checking interactive conditions..." >&2
+            echo "[DEBUG]   CLI_SCRIPT_COMMAND: '${CLI_SCRIPT_COMMAND}'" >&2
+            echo "[DEBUG]   CLI_PASS_THROUGH length: ${#CLI_PASS_THROUGH[@]}" >&2
+            echo "[DEBUG]   Terminal input (-t 0): $([[ -t 0 ]] && echo "true" || echo "false")" >&2
+        fi
+        
+        # Check if this is an interactive session with no arguments
+        if [[ -z "${CLI_SCRIPT_COMMAND}" ]] && [[ ${#CLI_PASS_THROUGH[@]} -eq 0 ]]; then
+            if [[ "$VERBOSE" == "true" ]]; then
+                echo "[DEBUG] Interactive session detected, showing interactive menu" >&2
+            fi
+            # Interactive mode with no slots - show interactive menu instead of quick setup
+            if show_interactive_menu; then
+                # User chose option 1 (Claude CLI) but we have no slots - now show quick setup
+                show_no_slots_menu
+                exit 1
+            else
+                # User chose another option, function handled it and exited
+                exit 0
+            fi
+        else
+            if [[ "$VERBOSE" == "true" ]]; then
+                echo "[DEBUG] Non-interactive session, showing quick setup directly" >&2
+            fi
+            # Non-interactive or has arguments - show quick setup directly
+            show_no_slots_menu
+            exit 1
+        fi
     fi
 
     # Always set IMAGE_NAME based on parent folder
